@@ -25,23 +25,18 @@ table.foreach(client, print)
 
 local client = require(game:GetService("ReplicatedStorage").Packages._Index["sleitnick_comm@1.0.1"].comm.Client.ClientRemoteSignal)
 
--- getgenv().trysave = {}
--- client.Fire = function(...)
---     local a = {...}
---     getgenv().trysave = ...
---     table.foreach(a, print)
---     return old(...)
--- end
+client.Fire = function(...)
+    local a = {...}
+    print(debug.getinfo(a[1]))
+    table.foreach(a, print)
+    return old(...)
+end
 
 
 local v0 = require(game:GetService("ReplicatedStorage").Packages.Knit);
 v8 = v0.GetService("EggService");
 
-v8.openEgg.Fire({
-    _hasOutbound = false,
-    _directConnect = true,
-    _re = "jag k\195\164nner en bot, hon heter anna, anna heter hon",
-}, "Basic", 1)
+v8.openEgg.Fire("Basic", 1)
 
 
 local v0 = require(game:GetService("ReplicatedStorage").Packages.Knit);
@@ -51,3 +46,7 @@ v5.click:Fire();
 local v0 = require(game:GetService("ReplicatedStorage").Packages.Knit);
 v5 = v0.GetService("ClickService");
 table.foreach(debug.getinfo(v5.click.Fire), print)
+
+
+local egg = require(game:GetService("ReplicatedStorage").Shared.List.Pets.Eggs)
+
