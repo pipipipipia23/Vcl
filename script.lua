@@ -8,7 +8,6 @@ local Services = setmetatable({}, {
 -- Client
 local Knit = require(Services.ReplicatedStorage.Packages.Knit);
 local Client = require(game:GetService("ReplicatedStorage").Packages._Index["sleitnick_comm@1.0.1"].comm.Client.ClientRemoteSignal)
-
 -- Services
 local ClickService = Knit.GetService("ClickService")
 local EggService = Knit.GetService("EggService")
@@ -26,6 +25,10 @@ local dataUpgrade = require(Services.ReplicatedStorage.Shared.List.Upgrades)
 local PlaytimeRewards = require(Services.ReplicatedStorage.Shared.List.PlaytimeRewards)
 local Achievements = require(Services.ReplicatedStorage.Shared.List.Achievements)
 local FarmData = require(Services.ReplicatedStorage.Shared.List.Farms)
+local EggData = require(Services.ReplicatedStorage.Shared.List.Pets.Eggs)
+
+-- Env
+local Map = {}
 
 -- Extra Functions
 function fireHehe(remote, ...)
@@ -43,9 +46,20 @@ function getData(name)
     return DataController.data
 end
 
+for i,v in pairs(getData()) do
+    print(i,v)
+end
+
 function getMaxRebirth()
     return getData("upgrades")["rebirthButtons"] or 0
 end
+
+-- Setup Map
+-- for i,v in pairs(workspace.Game.Maps:GetDescendants()) do
+--     if v.Name == "NextMap" then
+--         v.Parent
+--     end
+-- end
 
 -- function 
 function upgrade()
@@ -136,6 +150,18 @@ function ClaimFarm()
     end
 end
 
+function openEgg()
+    local eggName = "Basic"
+    for i,v in pairs(EggData) do
+        if v.requiredMap == #getData("maps") then
+            eggName = i
+            break
+        end
+    end
+    print(eggName)
+    fireHehe(EggService.openEgg, eggName, 99)
+end
+
 function SomeThing()
     fireHuhu(RebirthService.rebirth, 3 + getMaxRebirth())
     PrestigeService:claim()
@@ -152,6 +178,12 @@ end
 task.spawn(function()
     while task.wait() do
         fireHehe(ClickService.click)
+    end
+end)
+
+task.spawn(function()
+    while task.wait(1) do
+        pcall(openEgg)
     end
 end)
 

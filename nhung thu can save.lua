@@ -50,4 +50,4 @@ table.foreach(debug.getinfo(v5.click.Fire), print)
 
 local egg = require(game:GetService("ReplicatedStorage").Shared.List.Pets.Eggs)
 
--- fireHehe(EggService.openEgg, "Basic", 1)
+-- fireHehe(EggService.openEgg, "Basic", 99)
