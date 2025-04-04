@@ -161,4 +161,3 @@ task.spawn(function()
     end
 end)
 --
--- fireHehe(EggService.openEgg, "Basic", 1)
