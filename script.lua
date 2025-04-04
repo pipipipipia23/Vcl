@@ -16,9 +16,12 @@ local UpgradeService = Knit.GetService("UpgradeService")
 local RewardService = Knit.GetService("RewardService")
 local PrestigeService = Knit.GetService("PrestigeService")
 local FarmService = Knit.GetService("FarmService")
+local FallingStarsService = Knit.GetService("FallingStarsService")
 
 -- Controller
 local DataController = Knit.GetController("DataController")
+local EggController = Knit.GetController("EggController")
+local FallingStarsController = Knit.GetController("FallingStarsController")
 
 -- Data
 local dataUpgrade = require(Services.ReplicatedStorage.Shared.List.Upgrades)
@@ -26,6 +29,7 @@ local PlaytimeRewards = require(Services.ReplicatedStorage.Shared.List.PlaytimeR
 local Achievements = require(Services.ReplicatedStorage.Shared.List.Achievements)
 local FarmData = require(Services.ReplicatedStorage.Shared.List.Farms)
 local EggData = require(Services.ReplicatedStorage.Shared.List.Pets.Eggs)
+local PetData = require(Services.ReplicatedStorage.Shared.List.Pets.Pets)
 
 -- Env
 local Map = {}
@@ -46,9 +50,7 @@ function getData(name)
     return DataController.data
 end
 
-for i,v in pairs(getData()) do
-    print(i,v)
-end
+-- v.am
 
 function getMaxRebirth()
     return getData("upgrades")["rebirthButtons"] or 0
@@ -150,17 +152,51 @@ function ClaimFarm()
     end
 end
 
+function claimFallingStars()
+    for i,v in pairs(FallingStarsController._debounce) do
+        FallingStarsService:claimStar(i)
+    end
+end
+
 function openEgg()
     local eggName = "Basic"
     for i,v in pairs(EggData) do
-        if v.requiredMap == #getData("maps") then
+        if v.requiredMap == #getData("maps") and v.cost < getData("clicks") then
             eggName = i
+            fireHehe(EggService.openEgg, eggName, 99)
             break
         end
     end
-    print(eggName)
-    fireHehe(EggService.openEgg, eggName, 99)
+    if eggName == "Basic" then
+        if EggData[eggName].cost < getData("clicks") then
+            fireHehe(EggService.openEgg, eggName, 99)
+        end
+    end
 end
+
+function getmaxslot()
+
+end
+
+function equipPet()
+    local ListPets = {}
+    for i,v in pairs(getData().inventory.pet) do
+        table.insert(ListPets,{
+            name = i,
+            dame = PetData[v.nm].multiplier
+        })
+    end
+    table.sort(ListPets, function(a,b)
+        return a.dame > b.dame
+    end)
+
+    for i,v in pairs(ListPets) do
+        local number = getData().inventory.pet[v.name].am or 1
+
+    end
+end
+
+equipPet()
 
 function SomeThing()
     fireHuhu(RebirthService.rebirth, 3 + getMaxRebirth())

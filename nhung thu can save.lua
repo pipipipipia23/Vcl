@@ -51,3 +51,6 @@ table.foreach(debug.getinfo(v5.click.Fire), print)
 local egg = require(game:GetService("ReplicatedStorage").Shared.List.Pets.Eggs)
 
 -- fireHehe(EggService.openEgg, "Basic", 99)
+
+
+workspace.Debris:GetChildren()[276].Hitbox.TouchInterest
