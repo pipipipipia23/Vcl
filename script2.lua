@@ -140,6 +140,10 @@ function userModule:__init()
     end)
 end
 
+function userModule:getMapToUnlock()
+    return tonumber(self.dataController.data.maps[#self.dataController.data.maps]) + 1
+end
+
 function userModule:click()
     self.clickService.click:Fire()
 end
@@ -151,7 +155,11 @@ function userModule:rebirth()
 end
 
 function userModule:farm()
-
+    local needToUnlock = self:getMapToUnlock()
+    local quest = self.dataController.data.mapQuests
+    if needToUnlock == 2 then
+        
+    end
 end
 
 -- [[ Init ]]
