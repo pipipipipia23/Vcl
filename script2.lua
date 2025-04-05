@@ -46,6 +46,7 @@ end
 PLACE_ID = game.PlaceId :: number?
 JOB_ID = game.JobId :: string?
 CLIENT_FPS = 60 :: number
+DAY_RESET_TIME = 86400 :: number?
 
 -- [[ Services ]]
 local Services = setmetatable({}, {
@@ -76,10 +77,28 @@ local player : Player = Services('Players').LocalPlayer
 local playerGui : PlayerGui= player:WaitForChild('PlayerGui')
 local playerScripts : Folder = player:WaitForChild('PlayerScripts')
 
+-- [[ Knit ]]
 local knit = require(replicatedStorage.Packages.Knit)
-local rebirthsList = require(replicatedStorage.Shared.List.Rebirths)
+local upgradesList = require(replicatedStorage.Shared.List.Upgrades)
+local playtimeRewardsList = require(replicatedStorage.Shared.List.PlaytimeRewards)
+local achievementsList = require(replicatedStorage.Shared.List.Achievements)
+local farmsList = require(replicatedStorage.Shared.List.Farms)
+local eggs = require(replicatedStorage.Shared.List.Pets.Eggs)
+local clickService = knit.GetService('ClickService')
+local rebirthService = knit.GetService('RebirthService')
+local upgradeService = knit.GetService('UpgradeService')
+local dataController = knit.GetController('DataController')
+local rewardService = knit.GetService('RewardService')
+local farmService = knit.GetService('FarmService')
+local fallingStarsController = knit.GetController('FallingStarsController')
+local fallingStarsService = knit.GetService('FallingStarsService')
+local eggService = knit.GetService('EggService')
+local prestigeService = knit.GetService('PrestigeService')
+local utils = require(replicatedStorage.Shared.Util)
+local petService = knit.GetService('PetService')
+local values = require(replicatedStorage.Shared.Values)
 
--- [[ Functions ]]
+-- [[ Sub Functions ]]
 local char : () -> Model
 char = LPH_NO_VIRTUALIZE(function()
     if player.Character and 
@@ -94,26 +113,217 @@ char = LPH_NO_VIRTUALIZE(function()
     return char()
 end)
 
-local function safeTaskWait(time : number)
+local function safeTaskWait(time : number) : number
     time = time or 0
     return task.wait(time * (CLIENT_FPS / 60))
 end
 
--- [[ Modules ]]
-local userModule = {}
-userModule.__index = userModule
-
-function userModule.__new()
-    local self = setmetatable({}, userModule)
-    return self
+local function fireRemote(remote, ...) : any
+    return remote.Fire(remote, ...)
 end
 
-function userModule:__init()
-    self.clickService = knit.GetService('ClickService')
-    self.rebirthService = knit.GetService('RebirthService')
-    self.dataController = knit.GetController('DataController')
-    self.rebirthsList = rebirthsList
+local function callRemote(remote, ...) : any
+    return remote(remote, ...)
+end
 
+-- [[ Main Functions ]]
+local function click() : any
+    clickService.click:Fire()
+end
+
+local function rebirth() : any
+    local success, value = pcall(function()
+        return dataController.data.upgrades.rebirthButtons
+    end)
+
+    local rebirthValue = 3 + ((success and value) or 0)
+    rebirthService:rebirth(rebirthValue)
+end
+
+local function upgrade() : any
+    for i, v in pairs(upgradesList) do
+        if i ~= 'freeAutoClicker' then
+            local data = dataController.data['upgrades'][i]
+            if data then
+                local final = v.upgrades[data + 1]
+                if final ~= nil then
+                    if dataController.data.gems >= final.cost then
+                        upgradeService:upgrade(i)
+                    end
+                end
+            else
+                if v.upgrades[1].cost <= dataController.data.gems then
+                    upgradeService:upgrade(i)
+                end
+            end
+        end
+    end
+end
+
+local function collectChest() : any
+    for i,v in pairs(workspace.Game.Maps:GetChildren()) do
+        if v:FindFirstChild('MiniChests') then
+            for i1,v1 in pairs(v.MiniChests:GetChildren()) do
+                if v1:FindFirstChild('Touch') then
+                    local id = v1:GetAttribute('miniChestId');
+                    local name = v1:GetAttribute('miniChestName');
+                    if dataController.data.miniChests[name] then
+                        v1:Destroy()
+                    else
+                        rewardService:claimMiniChest(id, name)
+                    end
+                end
+            end
+        end
+    end
+end
+
+function claimPlaytimeRewards() : any
+    for i,v in pairs(playtimeRewardsList) do
+        local sessionTime : number = dataController.data['sessionTime']
+        local claimedTable : table = dataController.data['claimedPlaytimeRewards']
+        if table.find(claimedTable, i) == nil and (v.required - sessionTime) <= 0 then
+            rewardService:claimPlaytimeReward(i)
+        end
+    end
+end
+
+function claimDaily() : any
+    local dayReset = dataController.data['dayReset']
+    if workspace:GetServerTimeNow() - dayReset > DAY_RESET_TIME then
+        rewardService:claimDailyReward()
+    end
+end
+
+function claimAchievements() : any
+    for i, v in pairs(achievementsList) do
+        rewardService:claimAchievement(i)
+    end
+end
+
+function farmer() : any
+    for i, v in pairs(farmsList) do
+        local hasUnlock = dataController.data.farms[i]
+        if hasUnlock then
+            local data = hasUnlock
+            local datareal = v.upgrades
+            local nexup = datareal[data.stage + 1]
+            if nexup ~= nil then
+                if nexup.price <= dataController.data.gems then
+                    farmService:upgrade(i)
+                end
+            end
+        else
+            farmService:buy(i)
+        end
+    end
+end
+
+function claimFarm() : any
+    for i, v in pairs(dataController.data.farms) do
+        if i ~= 'farmer' then
+            farmService:claim(i)
+            wait(2)
+        end
+    end
+end
+
+function claimFallingStars() : any
+    for i,v in pairs(fallingStarsController._debounce) do
+        fallingStarsService:claimStar(i)
+    end
+end
+
+function openEgg()
+    local eggName = 'Basic'
+    for i,v in pairs(eggs) do
+        if v.requiredMap == #dataController.data['maps'] and v.cost < dataController.data.clicks then
+            eggName = i
+            fireRemote(eggService.openEgg, eggName, 99)
+            break
+        end
+    end
+    if eggName == 'Basic' then
+        if eggs[eggName].cost < dataController.data.clicks then
+            fireRemote(eggService.openEgg, eggName, 99)
+        end
+    end
+end
+
+local function callAnotherFunctions() : any
+    prestigeService:claim()
+    rebirth()
+    upgrade()
+    claimAchievements()
+    claimDaily()
+    claimFallingStars()
+    claimFarm()
+    collectChest()
+end
+
+local function equipBest()
+    local petInventory = dataController.data.inventory.pet
+    local tbl = {}
+    for id, petData in next, petInventory do
+        local data = utils.itemUtils.getItemFromId(dataController.data, id)
+        tbl[#tbl+1] = {
+            itemId = id,
+            item = data
+        }
+    end
+
+    table.sort(tbl, function(a, b)
+        return a.item:getMultiplier(dataController.data, {
+            ignoreServer = true
+        }) > b.item:getMultiplier(dataController.data, {
+            ignoreServer = true
+        })
+    end)
+
+    local tbl2 = {};
+    for _, v240 in tbl do
+        if #tbl2 < values.petsEquipped(player, dataController.data) then
+            for _ = 1, v240.item:getAmount() do
+                if #tbl2 < values.petsEquipped(player, dataController.data) then
+                    tbl2[#tbl2 + 1] = v240.itemId
+                else
+                    break
+                end
+            end
+        else
+            break
+        end
+    end
+
+    local v242 = {}
+    for v243, _ in dataController.data.equippedPets do
+        v242[#v242 + 1] = v243
+    end
+    petService:unequipPet(v242)
+    petService:equipPet(tbl2)
+end
+
+-- [[ Init ]]
+task.spawn(function()
+    while safeTaskWait(0) do
+        click()
+    end
+end)
+
+task.spawn(function()
+    while safeTaskWait(1) do
+        pcall(openEgg)
+        pcall(equipBest)
+    end
+end)
+
+task.spawn(function()
+    while safeTaskWait(5) do
+        callAnotherFunctions()
+    end
+end)
+
+task.spawn(function()
     local lastUpdateTime : number = os.time()
     local frameCount : number = 0
 
@@ -138,37 +348,4 @@ function userModule:__init()
             until false
         end
     end)
-end
-
-function userModule:getMapToUnlock()
-    return tonumber(self.dataController.data.maps[#self.dataController.data.maps]) + 1
-end
-
-function userModule:click()
-    self.clickService.click:Fire()
-end
-
-function userModule:rebirth()
-    for i = #self.rebirthsList, 1, -1 do
-        self.rebirthService:rebirth(self.rebirthsList[i])
-    end
-end
-
-function userModule:farm()
-    local needToUnlock = self:getMapToUnlock()
-    local quest = self.dataController.data.mapQuests
-    if needToUnlock == 2 then
-        
-    end
-end
-
--- [[ Init ]]
-local user = userModule.__new()
-user:__init()
-
-task.spawn(function()
-    while safeTaskWait(0) do
-        user:click()
-        task.spawn(user.rebirth, user)
-    end
 end)
