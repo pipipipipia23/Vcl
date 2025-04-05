@@ -180,6 +180,7 @@ end
 
 function equipPet()
     local ListPets = {}
+    local ListHighest = {}
     for i,v in pairs(getData().inventory.pet) do
         table.insert(ListPets,{
             name = i,
@@ -192,7 +193,9 @@ function equipPet()
 
     for i,v in pairs(ListPets) do
         local number = getData().inventory.pet[v.name].am or 1
-
+        for i1 = 1, number do
+            table.insert(ListHighest, v.name)
+        end
     end
 end
 
