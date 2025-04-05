@@ -191,7 +191,7 @@ function equipPet()
         return a.dame > b.dame
     end)
 
-    for i,v in pairs(ListPets) do
+    for i,v in pairs(ListPets) do -- lưu ý lấy max slot rồi giới hạn cho nó ở list tối đa slot pet thôi nhé
         local number = getData().inventory.pet[v.name].am or 1
         for i1 = 1, number do
             table.insert(ListHighest, v.name)
