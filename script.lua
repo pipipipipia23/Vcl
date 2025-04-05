@@ -17,7 +17,7 @@ local RewardService = Knit.GetService("RewardService")
 local PrestigeService = Knit.GetService("PrestigeService")
 local FarmService = Knit.GetService("FarmService")
 local FallingStarsService = Knit.GetService("FallingStarsService")
-
+local PetService = Knit.GetService("PetService")
 -- Controller
 local DataController = Knit.GetController("DataController")
 local EggController = Knit.GetController("EggController")
@@ -30,6 +30,7 @@ local Achievements = require(Services.ReplicatedStorage.Shared.List.Achievements
 local FarmData = require(Services.ReplicatedStorage.Shared.List.Farms)
 local EggData = require(Services.ReplicatedStorage.Shared.List.Pets.Eggs)
 local PetData = require(Services.ReplicatedStorage.Shared.List.Pets.Pets)
+local ValuesData = require(Services.ReplicatedStorage.Shared.Values)
 
 -- Env
 local Map = {}
@@ -174,13 +175,11 @@ function openEgg()
     end
 end
 
-function getmaxslot()
-
-end
-
 function equipPet()
     local ListPets = {}
     local ListHighest = {}
+    local UnequipPet = {}
+    local maxslot = ValuesData.petsEquipped(plr, getData())
     for i,v in pairs(getData().inventory.pet) do
         table.insert(ListPets,{
             name = i,
@@ -190,16 +189,28 @@ function equipPet()
     table.sort(ListPets, function(a,b)
         return a.dame > b.dame
     end)
-
     for i,v in pairs(ListPets) do -- lưu ý lấy max slot rồi giới hạn cho nó ở list tối đa slot pet thôi nhé
         local number = getData().inventory.pet[v.name].am or 1
         for i1 = 1, number do
-            table.insert(ListHighest, v.name)
+            if #ListHighest >= maxslot then
+                break
+            else
+                table.insert(ListHighest, v.name)
+            end
         end
     end
+    for i,v in pairs(getData("equippedPets")) do
+        if table.find(ListHighest, i) then
+            table.remove(ListHighest, i)
+        else
+            table.insert(UnequipPet, i)
+        end
+    end
+    if #UnequipPet > 0 then
+        PetService:unequipPet(UnequipPet)
+    end
+    PetService:equipPet(ListHighest)
 end
-
-equipPet()
 
 function SomeThing()
     fireHuhu(RebirthService.rebirth, 3 + getMaxRebirth())
@@ -210,6 +221,7 @@ function SomeThing()
     claimAchievements()
     FarmerServices()
     ClaimFarm()
+    equipPet()
     collectChest()
 end
 
