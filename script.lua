@@ -9,6 +9,7 @@ local Services = setmetatable({}, {
 local Knit = require(Services.ReplicatedStorage.Packages.Knit);
 local Client = require(game:GetService("ReplicatedStorage").Packages._Index["sleitnick_comm@1.0.1"].comm.Client.ClientRemoteSignal)
 -- Services
+local runService = Services.RunService
 local ClickService = Knit.GetService("ClickService")
 local EggService = Knit.GetService("EggService")
 local RebirthService = Knit.GetService("RebirthService")
@@ -18,10 +19,12 @@ local PrestigeService = Knit.GetService("PrestigeService")
 local FarmService = Knit.GetService("FarmService")
 local FallingStarsService = Knit.GetService("FallingStarsService")
 local PetService = Knit.GetService("PetService")
+
 -- Controller
 local DataController = Knit.GetController("DataController")
 local EggController = Knit.GetController("EggController")
 local FallingStarsController = Knit.GetController("FallingStarsController")
+local AuraController = Knit.GetController("AuraController")
 
 -- Data
 local dataUpgrade = require(Services.ReplicatedStorage.Shared.List.Upgrades)
@@ -34,6 +37,12 @@ local ValuesData = require(Services.ReplicatedStorage.Shared.Values)
 
 -- Env
 local Map = {}
+
+FallingStarsService.spawnStar:Connect(function(...) --[[ Line: 287 ]]
+    print("Started falling stars")
+    local args = {...}
+    table.foreach(args, print)
+end);
 
 -- Extra Functions
 function fireHehe(remote, ...)
@@ -53,31 +62,24 @@ end
 
 -- v.am
 
-function getMaxRebirth()
-    return getData("upgrades")["rebirthButtons"] or 0
+function getMaxRebirth(getdata)
+    return getdata.upgrades["rebirthButtons"] or 0
 end
 
--- Setup Map
--- for i,v in pairs(workspace.Game.Maps:GetDescendants()) do
---     if v.Name == "NextMap" then
---         v.Parent
---     end
--- end
-
 -- function 
-function upgrade()
+function upgrade(getdata)
     for i,v in pairs(dataUpgrade) do
         if i ~= "freeAutoClicker" then
-            local data = getData("upgrades")[i]
+            local data = getdata.upgrades[i]
             if data then
                 local final = v.upgrades[data + 1]
                 if final ~= nil then
-                    if getData().gems >= final.cost then
+                    if getdata.gems >= final.cost then
                         UpgradeService:upgrade(i)
                     end
                 end
             else
-                if v.upgrades[1].cost <= getData().gems then
+                if v.upgrades[1].cost <= getdata.gems then
                     UpgradeService:upgrade(i)
                 end
             end
@@ -85,14 +87,14 @@ function upgrade()
     end
 end
 
-function collectChest()
+function collectChest(getdata)
     for i,v in pairs(workspace.Game.Maps:GetChildren()) do
         if v:FindFirstChild("MiniChests") then
             for i1,v1 in pairs(v.MiniChests:GetChildren()) do
                 if v1:FindFirstChild("Touch") then
                     local id = v1:GetAttribute("miniChestId");
                     local name = v1:GetAttribute("miniChestName");
-                    if getData().miniChests[name] then
+                    if getdata.miniChests[name] then
                         v1:Destroy()
                     else
                         RewardService:claimMiniChest(id, name)
@@ -103,18 +105,18 @@ function collectChest()
     end
 end
 
-function claimPlaytimeRewards()
+function claimPlaytimeRewards(getdata)
     for i,v in pairs(PlaytimeRewards) do
-        local sstime = getData("sessionTime")
-        local claimed = getData("claimedPlaytimeRewards")
+        local sstime = getdata.sessionTime
+        local claimed = getdata.claimedPlaytimeRewards
         if table.find(claimed, i) == nil and (v.required - sstime) <= 0 then
             RewardService:claimPlaytimeReward(i)
         end
     end    
 end
 
-function claimDaily()
-    local dayrs = getData("dayReset")
+function claimDaily(getdata)
+    local dayrs = getdata.dayReset
     if workspace:GetServerTimeNow() - dayrs > 86400 then
         RewardService:claimDailyReward()
     end
@@ -126,15 +128,15 @@ function claimAchievements()
     end
 end
 
-function FarmerServices()
+function FarmerServices(getdata)
     for i,v in pairs(FarmData) do
-        local hasUnlock = getData().farms[i]
+        local hasUnlock = getdata.farms[i]
         if hasUnlock then
             local data = hasUnlock
             local datareal = v.upgrades
             local nexup = datareal[data.stage + 1]
             if nexup ~= nil then
-                if nexup.price <= getData().gems then
+                if nexup.price <= getdata.gems then
                     FarmService:upgrade(i)
                 end
             end
@@ -144,8 +146,8 @@ function FarmerServices()
     end
 end
 
-function ClaimFarm()
-    for i,v in pairs(getData().farms) do
+function ClaimFarm(data)
+    for i,v in pairs(data.farms) do
         if i ~= "farmer" then
             FarmService:claim(i)
             wait(2)
@@ -161,26 +163,27 @@ end
 
 function openEgg()
     local eggName = "Basic"
+    local getdata = getData()
     for i,v in pairs(EggData) do
-        if v.requiredMap == #getData("maps") and v.cost < getData("clicks") then
+        if v.requiredMap == #getdata.maps and v.cost < getdata.clicks then
             eggName = i
             fireHehe(EggService.openEgg, eggName, 99)
             break
         end
     end
     if eggName == "Basic" then
-        if EggData[eggName].cost < getData("clicks") then
+        if EggData[eggName].cost < getdata.clicks then
             fireHehe(EggService.openEgg, eggName, 99)
         end
     end
 end
 
-function equipPet()
+function equipPet(getdata)
     local ListPets = {}
     local ListHighest = {}
     local UnequipPet = {}
-    local maxslot = ValuesData.petsEquipped(plr, getData())
-    for i,v in pairs(getData().inventory.pet) do
+    local maxslot = ValuesData.petsEquipped(plr, getdata)
+    for i,v in pairs(getdata.inventory.pet) do
         table.insert(ListPets,{
             name = i,
             dame = PetData[v.nm].multiplier
@@ -190,7 +193,7 @@ function equipPet()
         return a.dame > b.dame
     end)
     for i,v in pairs(ListPets) do -- lưu ý lấy max slot rồi giới hạn cho nó ở list tối đa slot pet thôi nhé
-        local number = getData().inventory.pet[v.name].am or 1
+        local number = getdata.inventory.pet[v.name].am or 1
         for i1 = 1, number do
             if #ListHighest >= maxslot then
                 break
@@ -199,7 +202,7 @@ function equipPet()
             end
         end
     end
-    for i,v in pairs(getData("equippedPets")) do
+    for i,v in pairs(getdata.equippedPets) do
         if table.find(ListHighest, i) then
             table.remove(ListHighest, i)
         else
@@ -212,17 +215,24 @@ function equipPet()
     PetService:equipPet(ListHighest)
 end
 
+function rollAura(getdata)
+    for i,v in pairs(getdata.inventory.auraDice) do
+        AuraController:roll(v.nm)
+    end
+end
+
 function SomeThing()
-    fireHuhu(RebirthService.rebirth, 3 + getMaxRebirth())
+    local data = getData()
     PrestigeService:claim()
-    upgrade()
-    claimPlaytimeRewards()
-    claimDaily()
+    upgrade(data)
+    claimPlaytimeRewards(data)
+    claimDaily(data)
     claimAchievements()
-    FarmerServices()
-    ClaimFarm()
-    equipPet()
-    collectChest()
+    FarmerServices(data)
+    ClaimFarm(data)
+    equipPet(data)
+    -- rollAura(data)
+    collectChest(data)
 end
 
 -- loop
@@ -233,14 +243,23 @@ task.spawn(function()
 end)
 
 task.spawn(function()
-    while task.wait(1) do
+    while task.wait(2) do
         pcall(openEgg)
     end
 end)
 
 task.spawn(function()
-    while task.wait(3) do
-        pcall(SomeThing)
+    while task.wait(2) do
+        pcall(function()
+            fireHuhu(RebirthService.rebirth, 3 + getMaxRebirth(getData()))
+        end)
+    end
+end)
+
+task.spawn(function()
+    while task.wait(2) do
+        local a,b = pcall(SomeThing)
+        print(a,b)
     end
 end)
 --
