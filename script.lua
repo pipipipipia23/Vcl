@@ -1,3 +1,5 @@
+wait(5)
+
 repeat wait() until game:IsLoaded()
 
 local Services = setmetatable({}, {
@@ -20,6 +22,7 @@ local FarmService = Knit.GetService("FarmService")
 local FallingStarsService = Knit.GetService("FallingStarsService")
 local PetService = Knit.GetService("PetService")
 local BuildingService = Knit.GetService("BuildingService")
+local InventoryService = Knit.GetService("InventoryService")
 
 -- Controller
 local DataController = Knit.GetController("DataController")
@@ -35,6 +38,7 @@ local FarmData = require(Services.ReplicatedStorage.Shared.List.Farms)
 local EggData = require(Services.ReplicatedStorage.Shared.List.Pets.Eggs)
 local PetData = require(Services.ReplicatedStorage.Shared.List.Pets.Pets)
 local ValuesData = require(Services.ReplicatedStorage.Shared.Values)
+local MapData = require(Services.ReplicatedStorage.Shared.List.Maps)
 
 -- Env
 local Map = {}
@@ -182,6 +186,26 @@ function openEgg()
     claimDaily(getdata)
 end
 
+function getPotion(getdata)
+    for i,v in pairs(getdata.inventory.potion) do
+        return i
+    end
+end
+
+function autoQuestPotion(getdata)
+    local thismap = #getdata.maps + 1
+    local questinmap = MapData[thismap].quests
+    for i,v in pairs(questinmap) do
+        if getdata.mapQuests[i] and getdata.mapQuests[i] >= v.amount then
+            if string.find(string.lower(v.quest), "potions") then
+                InventoryService:useItem(getPotion(getdata), {
+                    ["use"] = 1
+                })
+            end
+        end
+    end
+end
+
 function equipPet(getdata)
     local ListPets = {}
     local ListHighest = {}
@@ -242,6 +266,8 @@ function SomeThing()
     equipPet(data)
     task.wait(1)
     rollAura(data)
+    task.wait(1)
+    autoQuestPotion(data)
     task.wait(1)
     BuildingService:build("woodenBridge")
     task.wait(1)
