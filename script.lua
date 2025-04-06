@@ -1,4 +1,4 @@
-wait(5)
+wait(10)
 
 repeat wait() until game:IsLoaded()
 
@@ -65,7 +65,14 @@ function getData(name)
     return DataController.data
 end
 
--- v.am
+-- Lowest
+pcall(function()
+    settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+    UserSettings().GameSettings.MasterVolume = 0
+    UserSettings().GameSettings.SavedQualityLevel = Enum.SavedQualitySetting.QualityLevel1
+end)
+
+--
 
 function getMaxRebirth(getdata)
     return getdata.upgrades["rebirthButtons"] or 0
@@ -170,16 +177,16 @@ function openEgg()
     local eggName = "Basic"
     local getdata = getData()
     for i,v in pairs(EggData) do
-        if v.requiredMap == #getdata.maps and v.cost * 5 < getdata.clicks then
+        if v.requiredMap == #getdata.maps and v.cost * 30 < getdata.clicks then
             eggName = i
-            fireHehe(EggService.openEgg, eggName, 5)
+            fireHehe(EggService.openEgg, eggName, 30)
             break
         end
     end
     print(eggName)
     if eggName == "Basic" then
-        if EggData[eggName].cost * 5 < getdata.clicks then
-            fireHehe(EggService.openEgg, eggName, 5)
+        if EggData[eggName].cost * 30 < getdata.clicks then
+            fireHehe(EggService.openEgg, eggName, 30)
         end
     end
     claimPlaytimeRewards(getdata)
