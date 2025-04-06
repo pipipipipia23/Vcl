@@ -19,6 +19,7 @@ local PrestigeService = Knit.GetService("PrestigeService")
 local FarmService = Knit.GetService("FarmService")
 local FallingStarsService = Knit.GetService("FallingStarsService")
 local PetService = Knit.GetService("PetService")
+local BuildingService = Knit.GetService("BuildingService")
 
 -- Controller
 local DataController = Knit.GetController("DataController")
@@ -165,17 +166,20 @@ function openEgg()
     local eggName = "Basic"
     local getdata = getData()
     for i,v in pairs(EggData) do
-        if v.requiredMap == #getdata.maps and v.cost < getdata.clicks then
+        if v.requiredMap == #getdata.maps and v.cost * 5 < getdata.clicks then
             eggName = i
-            fireHehe(EggService.openEgg, eggName, 99)
+            fireHehe(EggService.openEgg, eggName, 5)
             break
         end
     end
+    print(eggName)
     if eggName == "Basic" then
-        if EggData[eggName].cost < getdata.clicks then
-            fireHehe(EggService.openEgg, eggName, 99)
+        if EggData[eggName].cost * 5 < getdata.clicks then
+            fireHehe(EggService.openEgg, eggName, 5)
         end
     end
+    claimPlaytimeRewards(getdata)
+    claimDaily(getdata)
 end
 
 function equipPet(getdata)
@@ -217,21 +221,30 @@ end
 
 function rollAura(getdata)
     for i,v in pairs(getdata.inventory.auraDice) do
-        AuraController:roll(v.nm)
+        if v.nm ~= "fireAuraDice" then
+            AuraController:roll(v.nm)
+        end
     end
 end
 
 function SomeThing()
     local data = getData()
     PrestigeService:claim()
+    task.wait(1)
     upgrade(data)
-    claimPlaytimeRewards(data)
-    claimDaily(data)
+    task.wait(1)
     claimAchievements()
+    task.wait(1)
     FarmerServices(data)
+    task.wait(1)
     ClaimFarm(data)
+    task.wait(1)
     equipPet(data)
-    -- rollAura(data)
+    task.wait(1)
+    rollAura(data)
+    task.wait(1)
+    BuildingService:build("woodenBridge")
+    task.wait(1)
     collectChest(data)
 end
 
