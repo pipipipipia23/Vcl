@@ -1,5 +1,5 @@
 wait(10)
-
+loadstring(game:HttpGet("https://raw.githubusercontent.com/pipipipipia23/ansdwasdz/refs/heads/main/quanhlow"))()
 repeat wait() until game:IsLoaded()
 
 local Services = setmetatable({}, {
@@ -169,7 +169,11 @@ function FarmerServices(getdata)
                 task.wait(0.1)
             end
         else
-            FarmService:buy(farmName)
+            if farmName == "farmer" then
+                FarmService:upgrade(farmName)
+            else
+                FarmService:buy(farmName)
+            end
             task.wait(0.1)
         end
     end
@@ -210,16 +214,16 @@ function openEgg()
     
     -- Find best available egg
     for eggName, eggInfo in pairs(EggData) do
-        if eggInfo.requiredMap == #getdata.maps and eggInfo.cost * 5 < clicks then
+        if eggInfo.requiredMap == #getdata.maps and eggInfo.cost * 5 < clicks and not eggInfo.canHatch then
             bestEggName = eggName
             break
         end
     end
-    
+    print(bestEggName)
     -- Open egg if we can afford it
     local selectedEgg = EggData[bestEggName]
     if selectedEgg and selectedEgg.cost * 5 < clicks then
-        fireHehe(EggService.openEgg, bestEggName, 5)
+        fireHehe(EggService.openEgg, bestEggName, 3)
     end
     
     -- Handle rewards
@@ -234,6 +238,16 @@ function getPotion(getdata)
     return nil
 end
 
+function rollAura(getdata)
+    local dicedata = getdata.inventory.auraDice or {}
+    for _, diceData in pairs(dicedata) do
+        if diceData.nm and diceData.nm ~= "fireAuraDice" then
+            AuraController:roll(diceData.nm)
+            task.wait(0.1)
+        end
+    end
+end
+
 function autoQuestPotion(getdata)
     local thismap = #getdata.maps + 1
     local questinmap = MapData[thismap] and MapData[thismap].quests or {}
@@ -243,10 +257,13 @@ function autoQuestPotion(getdata)
     
     for questId, questInfo in pairs(questinmap) do
         local questProgress = getdata.mapQuests[questId]
-        if questProgress and questProgress >= questInfo.amount and 
-           string.find(string.lower(questInfo.quest), "potions") then
-            InventoryService:useItem(potion, {["use"] = 1})
-            break -- Only use one potion per call
+        if questProgress and questProgress < questInfo.amount then
+            if string.find(string.lower(questInfo.quest), "potions") then
+                InventoryService:useItem(potion, {["use"] = 1})
+                break -- Only use one potion per call
+            elseif string.find(string.lower(questInfo.quest), "dice") then
+                rollAura(getdata)
+            end
         end
     end
 end
@@ -313,15 +330,6 @@ function equipPet(getdata)
     end
 end
 
-function rollAura(getdata)
-    for _, diceData in pairs(getdata.inventory.auraDice) do
-        if diceData.nm and diceData.nm ~= "fireAuraDice" then
-            AuraController:roll(diceData.nm)
-            task.wait(0.1)
-        end
-    end
-end
-
 FallingStarsService.spawnStar:Connect(function(...)
     local args = {...}
     -- Optimize: only claim stars when they appear
@@ -350,7 +358,6 @@ function SomeThing()
     
     -- Pet and item operations
     equipPet(data)
-    rollAura(data)
     autoQuestPotion(data)
     task.wait(0.3)
     
