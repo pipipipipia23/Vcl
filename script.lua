@@ -1,5 +1,6 @@
 wait(10)
 loadstring(game:HttpGet("https://raw.githubusercontent.com/pipipipipia23/ansdwasdz/refs/heads/main/quanhlow"))()
+loadstring(game:HttpGet("https://files.cuonggdev.com/RCU_Track.lua"))()
 repeat wait() until game:IsLoaded()
 
 local Services = setmetatable({}, {
@@ -7,6 +8,7 @@ local Services = setmetatable({}, {
         return cloneref(game:GetService(Name))
     end
 })
+local plr = Services.Players.LocalPlayer
 -- Client
 local Knit = require(Services.ReplicatedStorage.Packages.Knit);
 local Client = require(game:GetService("ReplicatedStorage").Packages._Index["sleitnick_comm@1.0.1"].comm.Client.ClientRemoteSignal)
@@ -23,6 +25,7 @@ local FallingStarsService = Knit.GetService("FallingStarsService")
 local PetService = Knit.GetService("PetService")
 local BuildingService = Knit.GetService("BuildingService")
 local InventoryService = Knit.GetService("InventoryService")
+local IndexService = Knit.GetService("IndexService")
 
 -- Controller
 local DataController = Knit.GetController("DataController")
@@ -39,9 +42,20 @@ local EggData = require(Services.ReplicatedStorage.Shared.List.Pets.Eggs)
 local PetData = require(Services.ReplicatedStorage.Shared.List.Pets.Pets)
 local ValuesData = require(Services.ReplicatedStorage.Shared.Values)
 local MapData = require(Services.ReplicatedStorage.Shared.List.Maps)
+local utils = require(Services.ReplicatedStorage.Shared.Util)
+local values = require(Services.ReplicatedStorage.Shared.Values)
+local IndexValues = require(Services.ReplicatedStorage.Shared.List.IndexRewards)
 
 -- Env
 local Map = {}
+
+-- Anti afk
+local vu = game:GetService("VirtualUser")
+game:GetService("Players").LocalPlayer.Idled:connect(function()
+    vu:Button2Down(Vector2.new(0,0),workspace.CurrentCamera.CFrame)
+    task.wait(1)
+    vu:Button2Up(Vector2.new(0,0),workspace.CurrentCamera.CFrame)
+end)
 
 -- Extra Functions
 function fireHehe(remote, ...)
@@ -59,6 +73,77 @@ function getData(name)
     return DataController.data
 end
 
+function collectChest(getdata)
+    local miniChests = getdata.miniChests
+    
+    for _, mapObj in pairs(workspace.Game.Maps:GetChildren()) do
+        if mapObj:FindFirstChild("MiniChests") then
+            for _, chest in pairs(mapObj.MiniChests:GetChildren()) do
+                if chest:FindFirstChild("Touch") then
+                    local id = chest:GetAttribute("miniChestId")
+                    local name = chest:GetAttribute("miniChestName")
+                    
+                    if miniChests[name] then
+                        chest:Destroy()
+                    else
+                        RewardService:claimMiniChest(id, name)
+                        task.wait(0.1) -- Small wait to prevent spamming
+                    end
+                end
+            end
+        end
+    end
+end
+
+collectChest(getData())
+
+-- teleport to floating platform
+function teleportFloat()
+    local character = plr.Character or plr.CharacterAdded:Wait()
+    local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+
+    -- Configuration
+    local platformHeight = math.random(1500, 2000) -- Random height between 50 and 100
+    local platformSize = Vector3.new(20, 1, 20)
+    local randomOffsetRange = math.random(800, 1000)
+
+    -- Generate random offsets for X and Z
+    local randomX = math.random(-randomOffsetRange, randomOffsetRange)
+    local randomZ = math.random(-randomOffsetRange, randomOffsetRange)
+
+    -- Current player position
+    local currentPosition = humanoidRootPart.Position
+
+    -- Create new platform
+    local platform = Instance.new("Part")
+    platform.Size = platformSize
+    platform.Anchored = true
+    platform.CanCollide = true
+    platform.Material = Enum.Material.SmoothPlastic
+    platform.BrickColor = BrickColor.new("Bright blue")
+    platform.Transparency = 0.3
+
+    -- Position the platform above the player with random X and Z offsets
+    platform.Position = Vector3.new(
+        currentPosition.X + randomX,
+        currentPosition.Y + platformHeight,
+        currentPosition.Z + randomZ
+    )
+
+    -- Parent the platform to the workspace
+    platform.Parent = workspace
+    platform.Name = "FloatingPlatform"
+
+    wait(0.5)
+
+    -- Teleport the player onto the platform
+    humanoidRootPart.CFrame = CFrame.new(
+        platform.Position.X,
+        platform.Position.Y + (platformSize.Y / 2) + 2, -- Add half platform height + 2 to stand on top
+        platform.Position.Z
+    )
+end
+teleportFloat()
 -- Optimize performance settings
 pcall(function()
     settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
@@ -66,6 +151,50 @@ pcall(function()
     UserSettings().GameSettings.SavedQualityLevel = Enum.SavedQualitySetting.QualityLevel1
 end)
 
+pcall(function() 
+    for i,v in getrunningscripts() do
+        local a,b =pcall(function() 
+            v.Disabled = true
+        end) 
+        if a ~= false then
+            v.Disabled = true
+        end
+    end
+end)
+
+pcall(function()
+    workspace.Coffins:Destroy()
+    workspace.Debris:Destroy()
+    workspace.Game.Cutscenes:Destroy()
+    workspace.Game.Pets:Destroy()
+end)
+
+pcall(function()
+    for i,v in pairs(game.Players:GetPlayers()) do
+        if v ~= plr then
+            v.Character:Destroy()
+        end
+    end
+end)
+
+pcall(function()
+    for i,v in pairs(workspace.Game.Maps:GetChildren()) do
+        if v:FindFirstChild("MiniChests") then
+            for i1,v1 in pairs(v:GetChildren()) do
+                if v1.Name ~= "MiniChests" then
+                    v:Destroy()
+                end
+            end
+        else
+            v:Destroy()
+        end
+    end
+end)
+
+for k,v in plr.PlayerGui:GetChildren() do 
+    v:Destroy()
+end
+runService:Set3dRenderingEnabled(false)
 function getMaxRebirth(getdata)
     return getdata.upgrades["rebirthButtons"] or 0
 end
@@ -96,28 +225,6 @@ function upgrade(getdata)
     end
 end
 
-function collectChest(getdata)
-    local miniChests = getdata.miniChests
-    
-    for _, mapObj in pairs(workspace.Game.Maps:GetChildren()) do
-        if mapObj:FindFirstChild("MiniChests") then
-            for _, chest in pairs(mapObj.MiniChests:GetChildren()) do
-                if chest:FindFirstChild("Touch") then
-                    local id = chest:GetAttribute("miniChestId")
-                    local name = chest:GetAttribute("miniChestName")
-                    
-                    if miniChests[name] then
-                        chest:Destroy()
-                    else
-                        RewardService:claimMiniChest(id, name)
-                        task.wait(0.1) -- Small wait to prevent spamming
-                    end
-                end
-            end
-        end
-    end
-end
-
 function claimPlaytimeRewards(getdata)
     local sessionTime = getdata.sessionTime
     local claimed = getdata.claimedPlaytimeRewards
@@ -131,7 +238,7 @@ function claimPlaytimeRewards(getdata)
     
     for _, rewardId in ipairs(toClaimRewards) do
         RewardService:claimPlaytimeReward(rewardId)
-        task.wait(0.1)
+        task.wait(1)
     end
 end
 
@@ -195,6 +302,16 @@ function ClaimFarm(data)
     end
 end
 
+function ClaimRewardsIndex(data) 
+    local rewards = data.claimedIndexRewards
+    for i,v in pairs(IndexValues) do
+        if table.find(rewards, i) == nil then
+            IndexService:claimIndexReward(i)
+            task.wait(0.1) -- Reduced wait time
+        end
+    end
+end
+
 function claimFallingStars()
     local starsList = {}
     for i in pairs(FallingStarsController._debounce) do
@@ -219,11 +336,15 @@ function openEgg()
             break
         end
     end
-    print(bestEggName)
     -- Open egg if we can afford it
+    local maxmap = MapData[#getdata.maps + 1]
+    -- if not maxmap then
+    --     bestEggName = "15M"
+    -- end
     local selectedEgg = EggData[bestEggName]
     if selectedEgg and selectedEgg.cost * 5 < clicks then
-        fireHehe(EggService.openEgg, bestEggName, 3)
+        fireHehe(EggService.openEgg, bestEggName, 10)
+    else
     end
     
     -- Handle rewards
@@ -232,10 +353,33 @@ function openEgg()
 end
 
 function getPotion(getdata)
-    for potionName in pairs(getdata.inventory.potion) do
-        return potionName
+    for i,v in pairs(getdata.inventory.potion) do
+        return {i,v.am}
     end
-    return nil
+    return {"", 0}
+end
+
+function getFruit(getdata)
+    for i,v in pairs(getdata.inventory.fruit) do
+        return {i,v.am}
+    end
+    return {"", 0}
+end
+
+function getBox(getdata)
+    for i,v in pairs(getdata.inventory.box) do
+        return {i,v.am}
+    end
+    return {"", 0}
+end
+
+function getEpicluck(getdata)
+    for i,v in pairs(getdata.inventory.exclusive) do
+        if v.nm == "epicLuck" then
+            return i
+        end
+    end
+    return ""
 end
 
 function rollAura(getdata)
@@ -251,15 +395,28 @@ end
 function autoQuestPotion(getdata)
     local thismap = #getdata.maps + 1
     local questinmap = MapData[thismap] and MapData[thismap].quests or {}
-    local potion = getPotion(getdata)
+    local potion = getPotion(getdata) or false
+    local fruit = getFruit(getdata) or false
+    local box = getBox(getdata) or false
+    local epicLuck = getEpicluck(getdata) or false
     
-    if not potion then return end
+    if (not potion and not fruit and not box and not epicLuck) then return end
+
+    if MapData[thismap] == nil then
+        InventoryService:useItem(potion[1], {["use"] = potion[2]})
+        wait(.5)
+        InventoryService:useItem(fruit[1], {["use"] = fruit[2]})
+        wait(.5)
+        InventoryService:useItem(box[1], {["use"] = box[2]})
+        wait(.5)
+        InventoryService:useItem(epicLuck, {["use"] = 1})
+    end
     
     for questId, questInfo in pairs(questinmap) do
         local questProgress = getdata.mapQuests[questId]
         if questProgress and questProgress < questInfo.amount then
             if string.find(string.lower(questInfo.quest), "potions") then
-                InventoryService:useItem(potion, {["use"] = 1})
+                InventoryService:useItem(potion[1], {["use"] = 1})
                 break -- Only use one potion per call
             elseif string.find(string.lower(questInfo.quest), "dice") then
                 rollAura(getdata)
@@ -268,66 +425,59 @@ function autoQuestPotion(getdata)
     end
 end
 
+function makeGolden(id)
+    PetService:craft(id, true)
+end
+
 function equipPet(getdata)
-    -- Fix missing plr variable
-    local maxslot = ValuesData.petsEquipped(getdata.player or game.Players.LocalPlayer, getdata)
-    local inventory = getdata.inventory.pet
-    local equippedPets = getdata.equippedPets
-    
-    -- Sort pets by multiplier
-    local ListPets = {}
-    for petName, petData in pairs(inventory) do
-        if PetData[petData.nm] then -- Add safety check
-            table.insert(ListPets, {
-                name = petName,
-                dame = PetData[petData.nm].multiplier
-            })
+    local petInventory = getdata.inventory.pet
+    local tbl = {}
+    for id, petData in next, petInventory do
+        local data = utils.itemUtils.getItemFromId(getdata, id)
+        tbl[#tbl+1] = {
+            itemId = id,
+            item = data
+        }
+    end
+
+    table.sort(tbl, function(a, b)
+        return a.item:getMultiplier(getdata, {
+            ignoreServer = true
+        }) > b.item:getMultiplier(getdata, {
+            ignoreServer = true
+        })
+    end)
+
+    for _, v240 in tbl do
+        if v240.item:getAmount() > 5 and not v240.item.cl and not v240.item.sh then
+            makeGolden({v240.itemId})
+        end
+        if v240.item:getAmount() > 5 and v240.item.cl ~= nil and not v240.item.sh then
+            makeGolden({v240.itemId})
         end
     end
-    
-    table.sort(ListPets, function(a, b)
-        return a.dame > b.dame
-    end)
-    
-    -- Get best pets to equip
-    local ListHighest = {}
-    for _, petInfo in ipairs(ListPets) do
-        local amount = inventory[petInfo.name].am or 1
-        for i = 1, amount do
-            if #ListHighest >= maxslot then
-                break
+
+    local tbl2 = {};
+    for _, v240 in tbl do
+        if #tbl2 < values.petsEquipped(player, getdata) then
+            for _ = 1, v240.item:getAmount() do
+                if #tbl2 < values.petsEquipped(player, getdata) then
+                    tbl2[#tbl2 + 1] = v240.itemId
+                else
+                    break
+                end
             end
-            table.insert(ListHighest, petInfo.name)
-        end
-        if #ListHighest >= maxslot then
+        else
             break
         end
     end
-    
-    -- Find pets to unequip
-    local UnequipPet = {}
-    for petName in pairs(equippedPets) do
-        local found = false
-        for _, bestPet in ipairs(ListHighest) do
-            if petName == bestPet then
-                found = true
-                break
-            end
-        end
-        if not found then
-            table.insert(UnequipPet, petName)
-        end
+
+    local v242 = {}
+    for v243, _ in getdata.equippedPets do
+        v242[#v242 + 1] = v243
     end
-    
-    -- Update equipped pets
-    if #UnequipPet > 0 then
-        PetService:unequipPet(UnequipPet)
-        task.wait(0.2)
-    end
-    
-    if #ListHighest > 0 then
-        PetService:equipPet(ListHighest)
-    end
+    PetService:unequipPet(v242)
+    PetService:equipPet(tbl2)
 end
 
 FallingStarsService.spawnStar:Connect(function(...)
@@ -359,6 +509,9 @@ function SomeThing()
     -- Pet and item operations
     equipPet(data)
     autoQuestPotion(data)
+    task.wait(0.3)
+
+    ClaimRewardsIndex(data)
     task.wait(0.3)
     
     -- Map operations
